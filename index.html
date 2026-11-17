@@ -140,6 +140,7 @@ header h1 .wsp{width:34px;height:34px;flex:none;display:inline-block}
 .cam{position:fixed;inset:0;background:#000;z-index:130;display:flex;flex-direction:column}
 .cam video{flex:1;width:100%;min-height:0;object-fit:contain;background:#000}
 .cam .ctop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;color:#fff;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0));z-index:2}
+.cam .ctop button{white-space:nowrap}.cam .ctop #camMsg{font-size:13px;text-align:center;flex:1;padding:0 6px}.cam .ctop .row{gap:6px;flex-wrap:nowrap}
 .cam .cbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:12px 16px 18px;background:#000}
 .cam .shot{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:var(--pri);flex:none;padding:0}
 .cam .shot:active{transform:scale(.94)}
@@ -271,7 +272,7 @@ header h1 .wsp{width:34px;height:34px;flex:none;display:inline-block}
         <div class="mut">บิลหลายหน้า: เลือกรูปได้หลายรูป (สูงสุด 6 รูป) ระบบจะต่อเป็นภาพเดียว</div>
         <div class="row" style="justify-content:center;margin-top:12px">
           <button class="pri big" id="btnCam">📷 ถ่ายรูปบิล</button>
-          <button class="big hidden" id="btnCamWeb">🎥 กล้องในเว็บ</button>
+          <button class="big hidden" id="btnCamWeb">📱 แอปกล้องของเครื่อง</button>
           <button class="big" id="btnPick">📁 เลือกไฟล์</button>
         </div>
         <input type="file" id="fCam" accept="image/*" class="hidden">
@@ -509,6 +510,7 @@ function go2(go) { if (go === 'home') show('home'); else if (go === 'mine') load
 // ใน Apps Script (iframe) กล้องถูกบล็อก → ใช้ input ธรรมดา · บน GitHub Pages ใช้ capture=environment (เปิดกล้องหลังทันที)
 // และมีปุ่ม "กล้องในเว็บ" (getUserMedia)
 var CAM_URL = 'https://sarassoo1122-commits.github.io/wsp-bill-scan/';
+// Android Chrome บางเครื่องไม่สนใจ capture → เปิดตัวเลือกรูป จึงให้ปุ่มหลักใช้กล้องในหน้าเว็บ (getUserMedia)
 if (!IN_GAS) { $('fCam').setAttribute('capture', 'environment'); $('btnCamWeb').classList.remove('hidden'); }
 else {
   // ลิงก์ Apps Script ใช้กล้องไม่ได้ → บอกให้ไปลิงก์ GitHub Pages
@@ -518,8 +520,9 @@ else {
   camTip.innerHTML = '⚠ ลิงก์นี้เปิดกล้องไม่ได้ (ข้อจำกัดของ Google) ใช้ลิงก์ที่มีกล้อง: <a href="' + CAM_URL + '" target="_blank" rel="noopener"><b>เปิดแอปแบบมีกล้อง</b></a>';
   $('drop').appendChild(camTip);
 }
-$('btnCam').onclick = function () { stopCountdown(); $('fCam').click(); };
-$('btnCamWeb').onclick = function () { stopCountdown(); openCamera(); };
+function takePhoto() { stopCountdown(); if (!IN_GAS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) openCamera(); else $('fCam').click(); }
+$('btnCam').onclick = takePhoto;
+$('btnCamWeb').onclick = function () { stopCountdown(); $('fCam').click(); };
 $('btnPick').onclick = function () { stopCountdown(); $('fPick').click(); };
 $('fCam').onchange = function () { var n = this.files.length; addFiles(this.files); this.value = ''; if (n) startCountdown(); };
 
@@ -533,7 +536,7 @@ function startCountdown() {
   function draw() {
     $('homeMsg').innerHTML = '<div class="msg info row" style="justify-content:space-between"><span>🤖 จะเริ่มให้ AI อ่านใน <b>' + left + '</b> วินาที (บิลหลายหน้า กด ถ่ายหน้าถัดไป)</span>' +
       '<span class="row"><button class="sm" id="cdNext">📷 ถ่ายหน้าถัดไป</button><button class="sm" id="cdStop">รอก่อน</button><button class="sm pri" id="cdGo">อ่านเลย</button></span></div>';
-    $('cdNext').onclick = function () { stopCountdown(); $('fCam').click(); };
+    $('cdNext').onclick = takePhoto;
     $('cdStop').onclick = stopCountdown;
     $('cdGo').onclick = function () { stopCountdown(); $('btnRead').click(); };
   }
@@ -550,17 +553,23 @@ function openCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('fCam').click(); return; }
   var facing = 'environment';
   var o = document.createElement('div'); o.className = 'cam';
-  o.innerHTML = '<div class="ctop"><button class="sm" data-c="close">✕ ปิด</button><span id="camMsg">จัดบิลให้อยู่ในกรอบ แล้วกดปุ่มกลม</span><button class="sm" data-c="flip">🔄 สลับกล้อง</button></div>' +
+  o.innerHTML = '<div class="ctop"><button class="sm" data-c="close">✕ ปิด</button><span id="camMsg">จัดบิลให้อยู่ในกรอบ แล้วกดปุ่มกลม</span><span class="row"><button class="sm hidden" data-c="torch">🔦 ไฟฉาย</button><button class="sm" data-c="flip">🔄 สลับกล้อง</button></span></div>' +
     '<video playsinline autoplay muted></video><div class="guide"></div><div class="flash"></div>' +
     '<div class="cbot"><div class="shots"></div><button class="shot" data-c="shot" title="ถ่ายรูป" aria-label="ถ่ายรูป"></button>' +
     '<div class="side"><button class="pri" data-c="done" disabled>เสร็จ (0)</button></div></div>';
   document.body.appendChild(o);
-  var video = o.querySelector('video'), shots = [], stream = null;
+  var video = o.querySelector('video'), shots = [], stream = null, torchOn = false;
   function stop() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
   function start() {
     stop();
-    return navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false })
-      .then(function (st) { stream = st; video.srcObject = st; return video.play(); });
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 2560 }, height: { ideal: 1440 } }, audio: false })
+      .then(function (st) {
+        stream = st; video.srcObject = st; torchOn = false;
+        var tr = st.getVideoTracks()[0], caps = (tr && tr.getCapabilities) ? tr.getCapabilities() : {};
+        o.querySelector('[data-c=torch]').classList.toggle('hidden', !caps.torch);
+        if (caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function () {});
+        return video.play();
+      });
   }
   function close() { stop(); if (o.parentNode) document.body.removeChild(o); }
   function upd() { var d = o.querySelector('[data-c=done]'); d.disabled = !shots.length; d.textContent = 'เสร็จ (' + shots.length + ')'; }
@@ -573,6 +582,11 @@ function openCamera() {
     var b = ev.target.closest('[data-c]'); if (!b) return;
     var c = b.getAttribute('data-c');
     if (c === 'close') close();
+    else if (c === 'torch') {
+      var t = stream && stream.getVideoTracks()[0]; if (!t) return;
+      torchOn = !torchOn; t.applyConstraints({ advanced: [{ torch: torchOn }] }).catch(function () { torchOn = false; });
+      b.textContent = torchOn ? '🔦 ปิดไฟ' : '🔦 ไฟฉาย';
+    }
     else if (c === 'flip') { facing = facing === 'environment' ? 'user' : 'environment'; start().catch(function () {}); }
     else if (c === 'shot') {
       if (!video.videoWidth) return;
