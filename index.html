@@ -575,7 +575,14 @@ function openCamera() {
   function upd() { var d = o.querySelector('[data-c=done]'); d.disabled = !shots.length; d.textContent = 'เสร็จ (' + shots.length + ')'; }
   start().catch(function (e) {
     close();
-    uiConfirm('เปิดกล้องในหน้าเว็บไม่ได้ (' + esc(e.name || e.message || e) + ')<br>จะใช้กล้องของเครื่องแทนไหม', 'กล้อง', 'ใช้กล้องของเครื่อง', 'ยกเลิก')
+    var denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    var help = denied ? '<b>กล้องถูกปิดสิทธิ์</b> วิธีเปิด:<ol style="margin:6px 0 6px 18px;padding:0;text-align:left">' +
+      '<li>ถ้าหน้าเว็บเปิดอยู่ในแอปอื่น (เช่น LINE) กด ⋮ แล้วเลือก <b>เปิดใน Chrome</b></li>' +
+      '<li>ใน Chrome แตะไอคอนหน้าที่อยู่เว็บ (ซ้ายของลิงก์) → <b>สิทธิ์</b> → <b>กล้อง</b> → อนุญาต (หรือ รีเซ็ตสิทธิ์)</li>' +
+      '<li>ถ้ายังไม่ได้: การตั้งค่าโทรศัพท์ → แอป → <b>Chrome</b> → สิทธิ์ → <b>กล้อง</b> → อนุญาตขณะใช้แอป</li>' +
+      '<li>กลับมาโหลดหน้านี้ใหม่ แล้วกดถ่ายรูปบิลอีกครั้ง</li></ol>'
+      : 'เปิดกล้องในหน้าเว็บไม่ได้ (' + esc(e.name || e.message || e) + ')<br>';
+    uiConfirm(help + 'ตอนนี้จะเลือกรูป/ใช้กล้องของเครื่องแทนไหม', 'กล้อง', 'ใช้กล้องของเครื่อง', 'ยกเลิก')
       .then(function (y) { if (y) $('fCam').click(); });
   });
   o.addEventListener('click', function (ev) {
