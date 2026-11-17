@@ -508,7 +508,16 @@ function go2(go) { if (go === 'home') show('home'); else if (go === 'mine') load
 // ------------------------------------------------------------ เลือกไฟล์
 // ใน Apps Script (iframe) กล้องถูกบล็อก → ใช้ input ธรรมดา · บน GitHub Pages ใช้ capture=environment (เปิดกล้องหลังทันที)
 // และมีปุ่ม "กล้องในเว็บ" (getUserMedia)
+var CAM_URL = 'https://sarassoo1122-commits.github.io/wsp-bill-scan/';
 if (!IN_GAS) { $('fCam').setAttribute('capture', 'environment'); $('btnCamWeb').classList.remove('hidden'); }
+else {
+  // ลิงก์ Apps Script ใช้กล้องไม่ได้ → บอกให้ไปลิงก์ GitHub Pages
+  var camTip = document.createElement('div');
+  camTip.className = 'msg warn';
+  camTip.style.marginTop = '10px';
+  camTip.innerHTML = '⚠ ลิงก์นี้เปิดกล้องไม่ได้ (ข้อจำกัดของ Google) ใช้ลิงก์ที่มีกล้อง: <a href="' + CAM_URL + '" target="_blank" rel="noopener"><b>เปิดแอปแบบมีกล้อง</b></a>';
+  $('drop').appendChild(camTip);
+}
 $('btnCam').onclick = function () { stopCountdown(); $('fCam').click(); };
 $('btnCamWeb').onclick = function () { stopCountdown(); openCamera(); };
 $('btnPick').onclick = function () { stopCountdown(); $('fPick').click(); };
