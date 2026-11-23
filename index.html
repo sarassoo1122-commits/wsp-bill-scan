@@ -488,7 +488,7 @@ function boot() {
     updateCat();
     $('dataInfo').innerHTML = 'ข้อมูล Express นำเข้าล่าสุด: ' + esc(stampBE(r.lastImport) || 'ยังไม่เคยนำเข้า') +
       (r.lastImportSrc ? ' (ส่งออกจากเครื่องเมื่อ ' + esc(stampBE(r.lastImportSrc)) + ')' : '') +
-      (r.hasKey ? '' : ' · <span class="chip err">ยังไม่ได้ใส่ GEMINI_API_KEY</span>');
+      (r.hasKey ? '' : ' · <span class="chip err">ยังไม่ได้ใส่ API key ของ AI</span>');
     show('home');
   }).catch(fail);
 }
@@ -721,13 +721,17 @@ function prepareFile() {
 }
 
 $('btnRead').onclick = function () {
+  if (S.reading) return;                          // กันอ่านซ้ำ (นับถอยหลังกับปุ่มอ่านเลยชนกัน)
+  stopCountdown();
   if (!S.cat) return uiAlert('ยังไม่ได้เลือกหมวดวัสดุ');
+  S.reading = true;
   busy('กำลังเตรียมรูป...');
   prepareFile().then(function (p) {
     S.prevImgs = p.imgs || []; S.prevType = p.type; S.prevTotal = p.total || 0;
-    busy('🤖 AI กำลังอ่านบิล... (ประมาณ 20–60 วินาที)');
+    busy('🤖 AI กำลังอ่านบิล... (ประมาณ 10–60 วินาที)');
     return api('readBill', S.token, S.cat, { name: p.name, mime: p.mime, b64: p.b64 });
   }).then(function (r) {
+    S.reading = false;
     unbusy();
     S.draftId = r.draftId;
     if (r.error) {
@@ -739,7 +743,7 @@ $('btnRead').onclick = function () {
     S.bill = r.bill; S.info = r.info;
     S.files = []; drawThumbs();
     openReview();
-  }).catch(fail);
+  }).catch(function (e) { S.reading = false; fail(e); });
 };
 
 // ------------------------------------------------------------ หน้าตรวจบิล
@@ -1021,7 +1025,9 @@ function loadAdmin() {
     unbusy();
     $('admStatus').innerHTML = 'นำเข้าล่าสุด: <b>' + esc(stampBE(r.lastImport) || 'ยังไม่เคย') + '</b>' + (r.lastImportSrc ? ' (ไฟล์ส่งออกเมื่อ ' + esc(stampBE(r.lastImportSrc)) + ')' : '') +
       '<br>สินค้า ' + fmt(r.counts.items, 0) + ' · ผู้ขาย ' + fmt(r.counts.sups, 0) + ' · ประวัติราคา ' + fmt(r.counts.prices, 0) + ' · คู่ชื่อที่จำ ' + fmt(r.counts.map, 0) + ' · บิลที่ส่ง ' + fmt(r.counts.bills, 0) +
-      '<br>รุ่น AI: ' + esc(r.model) + ' · API key: ' + (r.hasKey ? '<span class="chip ok">มีแล้ว</span>' : '<span class="chip err">ยังไม่มี</span>') +
+      '<br>AI อ่านบิล: ' + esc(r.model) + ' · คีย์: ' + (r.keys ? ['claude', 'gemini'].map(function (k) {
+        return (k === 'claude' ? 'Claude ' : 'Gemini ') + (r.keys[k] ? '<span class="chip ok">มีแล้ว</span>' : '<span class="chip warn">ยังไม่มี</span>');
+      }).join(' ') : (r.hasKey ? '<span class="chip ok">มีแล้ว</span>' : '<span class="chip err">ยังไม่มี</span>')) +
       ' · เวอร์ชัน ' + esc(r.version) + ' · <a href="' + esc(r.dbUrl) + '" target="_blank">เปิดชีตฐานข้อมูล</a>';
     S.cats_all = r.cats;
     drawUsers(r.users);
